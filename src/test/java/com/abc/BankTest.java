@@ -1,54 +1,162 @@
 package com.abc;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
+
+import java.math.BigDecimal;
+import java.util.Date;
+
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 
-import static org.junit.Assert.assertEquals;
+import com.bank.Bank;
+import com.bank.abc.CheckingAccount;
+import com.bank.abc.IAccount;
+import com.bank.abc.MaxiSavingAccount;
+import com.bank.abc.SavingsAccount;
+import com.bank.abc.exception.AmountMustBeGreaterThanZeroException;
 
+/**
+ * Bank Test cases
+ * 
+ * @author Bharat
+ * 
+ *         Should have negative test for each scenario
+ * 
+ */
 public class BankTest {
-    private static final double DOUBLE_DELTA = 1e-15;
+	private static final double DOUBLE_DELTA = 1e-15;
+	Customer john = null;
+	Customer bill = null;
+	ABCBank abcBank = null;
 
-    @Test
-    public void customerSummary() {
-        Bank bank = new Bank();
-        Customer john = new Customer("John");
-        john.openAccount(new Account(Account.CHECKING));
-        bank.addCustomer(john);
+	/**
+	 * Setup
+	 */
+	@Before
+	public void setUp() {
+		Bank bankFactory = new Bank();
+		john = new Customer("John");
+		bill = new Customer("Bill");
+		abcBank = bankFactory.getABCBank();
+	}
 
-        assertEquals("Customer Summary\n - John (1 account)", bank.customerSummary());
-    }
+	/**
+	 * Customer Summary test
+	 */
+	@Test
+	public void customerSummary() {
+		abcBank.addCustomer(john.openAccount(new CheckingAccount()));
 
-    @Test
-    public void checkingAccount() {
-        Bank bank = new Bank();
-        Account checkingAccount = new Account(Account.CHECKING);
-        Customer bill = new Customer("Bill").openAccount(checkingAccount);
-        bank.addCustomer(bill);
+		assertEquals("Customer Summary\n - John (1 account)",
+				abcBank.customerSummary());
+	}
 
-        checkingAccount.deposit(100.0);
+	/**
+	 * Amount less than or equal to Zero
+	 */
+	@Test
+	public void negativeCheckingAccount() {
+		IAccount checkingAccount = new CheckingAccount();
+		abcBank.addCustomer(bill.openAccount(checkingAccount));
 
-        assertEquals(0.1, bank.totalInterestPaid(), DOUBLE_DELTA);
-    }
+		try {
+			checkingAccount.deposit(new BigDecimal(0));
+			fail();
+		} catch (AmountMustBeGreaterThanZeroException exception) {
+			assertEquals("Amount must be greater than zero",
+					exception.getMessage());
+		}
 
-    @Test
-    public void savings_account() {
-        Bank bank = new Bank();
-        Account checkingAccount = new Account(Account.SAVINGS);
-        bank.addCustomer(new Customer("Bill").openAccount(checkingAccount));
+		try {
+			checkingAccount.deposit(new BigDecimal(-1));
+			fail();
+		} catch (AmountMustBeGreaterThanZeroException exception) {
+			assertEquals("Amount must be greater than zero",
+					exception.getMessage());
+		}
 
-        checkingAccount.deposit(1500.0);
+	}
 
-        assertEquals(2.0, bank.totalInterestPaid(), DOUBLE_DELTA);
-    }
+	/**
+	 * Checking account test
+	 */
+	@Test
+	public void checkingAccount() {
 
-    @Test
-    public void maxi_savings_account() {
-        Bank bank = new Bank();
-        Account checkingAccount = new Account(Account.MAXI_SAVINGS);
-        bank.addCustomer(new Customer("Bill").openAccount(checkingAccount));
+		IAccount checkingAccount = new CheckingAccount();
+		abcBank.addCustomer(bill.openAccount(checkingAccount));
 
-        checkingAccount.deposit(3000.0);
+		checkingAccount.deposit(new BigDecimal(100.0));
 
-        assertEquals(170.0, bank.totalInterestPaid(), DOUBLE_DELTA);
-    }
+		assertEquals(0.1, abcBank.totalInterestPaid().doubleValue(),
+				DOUBLE_DELTA);
+	}
 
+	/**
+	 * Saving
+	 */
+	@Test
+	public void savingAccount() {
+		IAccount savingAccount = new SavingsAccount();
+
+		abcBank.addCustomer(bill.openAccount(savingAccount));
+
+		savingAccount.deposit(new BigDecimal(1500.0));
+
+		assertEquals(2.0, abcBank.totalInterestPaid().doubleValue(),
+				DOUBLE_DELTA);
+	}
+
+	/**
+	 * Amount less than or equal to Zero
+	 */
+	@Test
+	public void negativeSavingAccount() {
+		IAccount savingAccount = new SavingsAccount();
+
+		abcBank.addCustomer(bill.openAccount(savingAccount));
+
+		try {
+			savingAccount.deposit(new BigDecimal(0));
+			fail();
+		} catch (AmountMustBeGreaterThanZeroException exception) {
+			assertEquals("Amount must be greater than zero",
+					exception.getMessage());
+		}
+
+		try {
+			savingAccount.deposit(new BigDecimal(-1));
+			fail();
+		} catch (AmountMustBeGreaterThanZeroException exception) {
+			assertEquals("Amount must be greater than zero",
+					exception.getMessage());
+		}
+
+	}
+
+	@Test
+	public void maxiSavingAccount() {
+		ABCBank bank = new ABCBank();
+		IAccount maxiSavingAccount = new MaxiSavingAccount();
+		bank.addCustomer(bill.openAccount(maxiSavingAccount));
+
+		maxiSavingAccount.deposit(new BigDecimal(3000.0));
+
+		maxiSavingAccount.getTransaction().get(0)
+				.setTransactionDate(new Date(new Date().getTime() - 20));
+
+		assertEquals(.3, bank.totalInterestPaid().doubleValue(), DOUBLE_DELTA);
+	}
+
+	/**
+	 * Tear down
+	 */
+	@After
+	public void tearDown() {
+		john = null;
+		bill = null;
+		abcBank = null;
+	}
 }
